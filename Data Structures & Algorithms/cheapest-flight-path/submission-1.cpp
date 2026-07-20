@@ -1,78 +1,44 @@
 class Solution {
 public:
+    int findCheapestPrice(int n, vector<vector<int>>& flights, int src, int dst, int k) {
 
-    
-    string foreignDictionary(vector<string>& words) {
-
-     unordered_map<char, unordered_set<char>> adj;
-    unordered_map<char, int> inDegree; // Tracks how many prerequisites a char has
-        
-        // 1. Initialize graph and in-degrees to 0 for ALL unique characters
-        for (const string& word : words) {
-            for (char c : word) {
-                adj[c] = unordered_set<char>();
-                inDegree[c] = 0;
-            }
+        vector<vector<pair<int, int>>> adj(n);
+        for (const auto& flight : flights) {
+            adj[flight[0]].push_back({flight[1], flight[2]});
         }
         
-        // 2. Build the graph and count in-degrees
-        for (int i = 0; i < words.size() - 1; ++i) {
-            string w1 = words[i];
-            string w2 = words[i + 1];
-            int minLen = min(w1.length(), w2.length());
+        //BFS Queue -> stores {currentNode, currentCost}
+        queue<pair<int, int>> q;
+        q.push({src, 0});
+        
+        vector<int> minCost(n, INT_MAX);
+        minCost[src] = 0;
+        
+        int stops = 0;
+        
+        // BFS level by level
+        // We can take up to k stops, which equals k + 1 levels of edges
+        while (!q.empty() && stops <= k) {
+            int size = q.size();
             
-            // Edge case: invalid prefix
-            if (w1.length() > w2.length() && w1.substr(0, minLen) == w2.substr(0, minLen)) {
-                return "";
-            }
-            
-            for (int j = 0; j < minLen; ++j) {
-                if (w1[j] != w2[j]) {
-                    char parent = w1[j];
-                    char child = w2[j];
-                    
-                    // Only increment in-degree if this is a NEW unique edge
-                    if (adj[parent].find(child) == adj[parent].end()) {
-                        adj[parent].insert(child);
-                        inDegree[child]++;
+            // Process all nodes at the current stop level
+            while (size--) {
+                auto [node, cost] = q.front();
+                q.pop();
+                
+                for (auto& [neighbor, price] : adj[node]) {
+                    // Only explore this path if it's CHEAPER than a previously found path
+                    if (cost + price < minCost[neighbor]) {
+                        minCost[neighbor] = cost + price;
+                        q.push({neighbor, cost + price});
                     }
-                    break;
                 }
             }
+            stops++; // Increment stops after finishing the current level
         }
         
-        // 3. Queue up all characters with 0 prerequisites
-        queue<char> q;
-        for (auto const& [c, count] : inDegree) {
-            if (count == 0) {
-                q.push(c);
-            }
-        }
-        
-        // 4. Process the queue
-        string res = "";
-        while (!q.empty()) {
-            char current = q.front();
-            q.pop();
-            res += current;
-            
-            // Remove prerequisites for all neighbors
-            for (char neighbor : adj[current]) {
-                inDegree[neighbor]--;
-                if (inDegree[neighbor] == 0) {
-                    q.push(neighbor); // They are now free to be processed!
-                }
-            }
-        }
-        
-        // 5. CYCLE DETECTION: Did we process every character?
-        // If the result doesn't have all characters, some were stuck in a cycle.
-        if (res.length() != inDegree.size()) {
-            return "";
-        }
-        
-        return res;
-
+        // Step 4: Return result
+        return minCost[dst] == INT_MAX ? -1 : minCost[dst];
         
     }
 };
